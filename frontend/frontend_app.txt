@@ -1,0 +1,115 @@
+
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Intelligent Resume Screening</title>
+<style>
+*{box-sizing:border-box}body{font-family:Arial,sans-serif;background:#f4f6fb;margin:0;color:#172033}
+.wrap{max-width:1050px;margin:25px auto;padding:18px}.card{background:#fff;padding:22px;border-radius:16px;margin:15px 0;box-shadow:0 4px 18px #0001}
+h1{margin-top:0}.muted{color:#667085}.drop{border:2px dashed #98a2b3;padding:25px;border-radius:12px;text-align:center}
+input[type=file]{margin:12px 0}.btn{padding:12px 20px;border:0;border-radius:9px;background:#111827;color:#fff;font-weight:bold;cursor:pointer}
+.btn:disabled{opacity:.5;cursor:not-allowed}.status{padding:10px;border-radius:8px;background:#f2f4f7;margin-top:10px}
+.ok{color:#067647}.bad{color:#b42318}.warn{color:#b54708}
+textarea{width:100%;min-height:140px;padding:12px;border:1px solid #ccd3df;border-radius:10px;resize:vertical}
+table{width:100%;border-collapse:collapse}th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}
+.score{font-weight:bold}.pill{display:inline-block;padding:4px 8px;margin:2px;border-radius:99px;background:#eef2ff;font-size:12px}
+.missing{background:#fff1f2}.small{font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card">
+<h1>Intelligent Resume Screening</h1>
+<p class="muted">Upload a Job Description and multiple resumes. The system extracts text, detects skills and ranks candidates.</p>
+</div>
+
+<div class="card">
+<h3>1. Job Description</h3>
+<textarea id="jd" placeholder="Example: Python, SQL, Machine Learning, FastAPI, Pandas, NumPy, Git; 2+ years experience"></textarea>
+
+<h3>2. Resumes</h3>
+<div class="drop">
+<input id="files" type="file" multiple accept=".pdf,.docx,.txt">
+<div id="fileCount" class="small muted">No files selected</div>
+</div>
+<br>
+<button class="btn" id="run">Screen & Rank Candidates</button>
+<div id="status" class="status">Checking backend...</div>
+</div>
+
+<div class="card" id="result" style="display:none">
+<h3>Candidate Ranking</h3>
+<div class="small muted" id="summary"></div><br>
+<table>
+<thead><tr><th>Rank</th><th>Candidate</th><th>Score</th><th>Matched Skills</th><th>Missing Skills</th></tr></thead>
+<tbody id="rows"></tbody>
+</table>
+</div>
+</div>
+
+<script>
+const filesEl=document.getElementById('files');
+filesEl.onchange=()=>document.getElementById('fileCount').textContent=
+  filesEl.files.length ? `${filesEl.files.length} resume(s) selected` : 'No files selected';
+
+async function health(){
+ try{
+   const r=await fetch('/health');
+   if(!r.ok) throw new Error();
+   document.getElementById('status').textContent='Backend connected ✓';
+   document.getElementById('status').className='status ok';
+ }catch(e){
+   document.getElementById('status').textContent='Backend not running. Start: uvicorn app:app --reload';
+   document.getElementById('status').className='status bad';
+ }
+}
+health();
+
+document.getElementById('run').onclick=async()=>{
+ const jd=document.getElementById('jd').value.trim();
+ const files=filesEl.files;
+ if(!jd){alert('Please enter the Job Description.');return}
+ if(!files.length){alert('Please select at least one PDF/DOCX/TXT resume.');return}
+
+ const fd=new FormData(); fd.append('jd',jd);
+ for(const f of files) fd.append('resumes',f);
+
+ document.getElementById('run').disabled=true;
+ document.getElementById('status').textContent='Uploading and processing...';
+ document.getElementById('status').className='status';
+
+ try{
+   const r=await fetch('/screen',{method:'POST',body:fd});
+   if(!r.ok) throw new Error(await r.text());
+   const d=await r.json();
+
+   document.getElementById('result').style.display='block';
+   document.getElementById('summary').textContent=`${d.results.length} candidate(s) ranked`;
+
+   document.getElementById('rows').innerHTML=d.results.map(x=>`<tr>
+   <td>${x.rank}</td>
+   <td><b>${escapeHtml(x.candidate)}</b></td>
+   <td class="score">${x.score}%</td>
+   <td class="ok">${(x.matched_skills||[]).map(s=>`<span class="pill">${escapeHtml(s)}</span>`).join('')||'—'}</td>
+   <td class="bad">${(x.missing_skills||[]).map(s=>`<span class="pill missing">${escapeHtml(s)}</span>`).join('')||'None'}</td>
+   </tr>`).join('');
+
+   document.getElementById('status').textContent='Done ✓';
+   document.getElementById('status').className='status ok';
+ }catch(e){
+   document.getElementById('status').textContent='Upload failed: '+e.message;
+   document.getElementById('status').className='status bad';
+ }finally{
+   document.getElementById('run').disabled=false;
+ }
+};
+
+function escapeHtml(s){
+ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+</script>
+</body>
+</html>
