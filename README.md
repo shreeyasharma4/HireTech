@@ -71,7 +71,7 @@ Conceptual Flow
 ├── backend/        → API and server
 ├── resumes/        → Sample resume files
 ├── model/          → Project resources
-├── docs/           → Results
+├── docs/           → Presentation
 └── README.md       → Project information
 ```
 
