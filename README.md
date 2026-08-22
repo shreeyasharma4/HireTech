@@ -50,17 +50,23 @@ Our system allows a recruiter to:
 ## 📂 Project Structure
 
 ```text
-hackathon-project
-│
-├── backend
-│   ├── app.py
-│   └── requirements.txt
-│
-├── frontend
-│   └── index.html
-│
-├── presentation
-│   └── hackathon-presentation.pptx
-│
-├── README.md
-└── .gitignore
+
+Conceptual Flow
+|
+├── frontend/       → Website interface
+├── backend/        → API and server
+├── docs/           → Documentation
+├── resumes/        → Resume files
+├── Hire Tech/      → Project resources
+└── README.md       → Project information
+
+## 👥 Team Members
+
+| # | Name | Role |
+|---|------|------|
+| 1 | **VANSHIKA** | Team Leader + Project Manager |
+| 2 | **SARTHAK** | Frontend Developer |
+| 3 | **ARMAN** | Backend Developer |
+| 4 | **SHREEYA** | Ideas + Documentation |
+| 5 | **ANSHIKHA** | Research + Information |
+| 6 | **PUSHKAR** | Format + ProofReading |
