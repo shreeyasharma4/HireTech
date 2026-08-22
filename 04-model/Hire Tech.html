@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Intelligent Resume Screening</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
+<script src="https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f4f7fb;color:#172033}
+.container{max-width:850px;margin:40px auto;padding:24px}.card{background:white;border-radius:18px;padding:28px;box-shadow:0 8px 30px #0001}
+h1{margin-top:0}.sub{color:#667085}textarea{width:100%;padding:12px;border:1px solid #ccd3df;border-radius:10px;resize:vertical}
+input[type=file]{width:100%;padding:12px;border:1px dashed #9aa5b5;border-radius:10px;background:#fafbfc}
+button{margin-top:16px;background:#2563eb;color:white;border:0;padding:12px 20px;border-radius:10px;font-size:16px;cursor:pointer}
+button:disabled{opacity:.6}.result{margin-top:22px}.candidate{border:1px solid #e1e6ef;border-radius:12px;padding:16px;margin:12px 0}
+.score{font-size:22px;font-weight:bold}.bar{height:8px;background:#e9edf3;border-radius:8px;overflow:hidden;margin:8px 0}.fill{height:100%;background:#2563eb}
+.tag{display:inline-block;background:#eef4ff;padding:5px 8px;border-radius:6px;margin:3px;font-size:13px}
+.missing{background:#fff0f0}.status{margin-top:12px;color:#475467}
+</style>
+</head>
+<body>
+<div class="container"><div class="card">
+<h1>🤖 HireTech</h1>
+<p class="sub">Upload multiple resumes and compare them with a job description.</p>
+
+<label><b>Job Description</b></label>
+<textarea id="jd" rows="7" placeholder="Example: Python, SQL, Machine Learning, Excel, communication..." required></textarea><br><br>
+
+<label><b>Upload Resumes (PDF, DOCX, TXT)</b></label>
+<input type="file" id="resumes" accept=".pdf,.docx,.txt" multiple required>
+
+<button id="screenBtn">Screen Resumes</button>
+<div id="status" class="status"></div>
+<div id="output" class="result"></div>
+</div></div>
+
+<script type="module">
+import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs";
+pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs";
+
+const btn=document.getElementById("screenBtn");
+const status=document.getElementById("status");
+const output=document.getElementById("output");
+
+function skillsFromJD(jd){
+  const known=["python","java","javascript","html","css","react","node.js","node","sql","mongodb","mysql","excel","power bi","tableau","machine learning","deep learning","artificial intelligence","data analysis","data science","c++","c#","git","github","communication","leadership","project management","cloud","aws","docker","flask","django","fastapi","tensorflow","pytorch"];
+  const low=jd.toLowerCase();
+  return known.filter(s=>low.includes(s));
+}
+
+async function extractText(file){
+  const ext=file.name.split(".").pop().toLowerCase();
+  if(ext==="txt") return await file.text();
+  if(ext==="docx"){
+    const ab=await file.arrayBuffer();
+    const r=await mammoth.extractRawText({arrayBuffer:ab});
+    return r.value;
+  }
+  if(ext==="pdf"){
+    const ab=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:ab}).promise;
+    let text="";
+    for(let i=1;i<=pdf.numPages;i++){
+      const page=await pdf.getPage(i);
+      const c=await page.getTextContent();
+      text += c.items.map(x=>x.str).join(" ")+" ";
+    }
+    return text;
+  }
+  return "";
+}
+
+function renderResult(r){
+  const matched=r.matched.map(x=>`<span class="tag">${x}</span>`).join("")||"None";
+  const missing=r.missing.map(x=>`<span class="tag missing">${x}</span>`).join("")||"None";
+  return `<div class="candidate">
+    <div><b>${r.name}</b></div>
+    <div class="score">${r.score}% Match</div>
+    <div class="bar"><div class="fill" style="width:${r.score}%"></div></div>
+    <b>Matched skills:</b><div>${matched}</div>
+    <b>Missing skills:</b><div>${missing}</div>
+  </div>`;
+}
+
+btn.onclick=async()=>{
+  const jd=document.getElementById("jd").value.trim();
+  const files=[...document.getElementById("resumes").files];
+  if(!jd || !files.length){alert("Please enter a job description and select at least one resume.");return;}
+
+  btn.disabled=true; status.textContent="Reading and screening resumes..."; output.innerHTML="";
+  const required=skillsFromJD(jd);
+  const results=[];
+
+  for(const file of files){
+    try{
+      const text=(await extractText(file)).toLowerCase();
+      const matched=required.filter(s=>text.includes(s));
+      const missing=required.filter(s=>!text.includes(s));
+      const score=required.length ? Math.round(matched.length/required.length*100) : 0;
+      results.push({name:file.name,score,matched,missing});
+    }catch(e){
+      results.push({name:file.name,score:0,matched:[],missing:required});
+    }
+  }
+
+  results.sort((a,b)=>b.score-a.score);
+  output.innerHTML=results.map(renderResult).join("");
+  status.textContent=`Screened ${results.length} resume(s).`;
+  btn.disabled=false;
+};
+</script>
+</body>
+</html>
