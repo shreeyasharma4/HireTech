@@ -69,9 +69,9 @@ Conceptual Flow
 |
 ├── frontend/       → Website interface
 ├── backend/        → API and server
-├── docs/           → Documentation
-├── resumes/        → Resume files
-├── Hire Tech/      → Project resources
+├── resumes/        → Sample resume files
+├── model/          → Project resources
+├── docs/           → Results
 └── README.md       → Project information
 ```
 
