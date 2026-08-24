@@ -53,8 +53,6 @@ Our system allows a recruiter to:
 ### Libraries
 - PyPDF
 - python-docx
-- Pandas
-- NumPy
 
 ### Tools
 - Git
